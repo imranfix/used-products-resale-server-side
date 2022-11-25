@@ -23,6 +23,7 @@ async function run(){
     try{
 
         const categoryCollection = client.db('oldBook').collection('category');
+        const productsCollection = client.db('oldBook').collection('products');
 
 
         // 1. get read data form category:
@@ -33,13 +34,34 @@ async function run(){
             res.send(category);
         });
 
-        // 2.
-        app.get('/category/:id', async(req, res) =>{
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const category = await categoryCollection.findOne(query);
-            res.send(category);
-        })
+        // 3.
+        app.get('/products', async(req, res) =>{
+            const query = {}
+            const cursor = productsCollection.find(query);
+            const product = await cursor.toArray();
+            res.send(product)
+         });
+
+
+         
+         // 2.
+        // app.get('/category/:id', async(req, res) =>{
+        //     const id = req.params.id;
+        //     const query = { _id: ObjectId(id) };
+        //     const categoryItem = await categoryCollection.findOne(query);
+        //     res.send(categoryItem);
+        // });
+ 
+
+         // 3.
+        // app.get('/products/:id', async(req, res) =>{
+        //     const id = req.params.id;
+        //     const query = { _id: ObjectId(id) };
+        //     const productsItem = await productsCollection.findOne(query);
+        //     res.send(categoryItem);
+        // });
+
+  
 
 
     }
