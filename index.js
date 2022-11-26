@@ -22,7 +22,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 // jwt middleware function:
 function verifyJWT(req, res, next){
-    console.log('token inside verifyJWT', req.headers.authorization);
+    // console.log('token inside verifyJWT', req.headers.authorization);
     const authHeader = req.headers.authorization;
     if(!authHeader){
         return res.status(401).send('Unauthorized Access');
@@ -89,7 +89,7 @@ async function run(){
         // 3.create data by post:
          app.post('/bookings', async(req, res) =>{
             const booking = req.body
-            console.log(booking);
+            // console.log(booking);
             const result = await buyerBookingCollection.insertOne(booking);
             res.send(result);
          });
@@ -97,8 +97,8 @@ async function run(){
         //  4. get data form bookings:
          app.get('/bookings', verifyJWT, async(req, res) =>{
             const email = req.query.email;
-            const decodedEmail = req.decoded.email;
-            if(email !==decodedEmail){
+            const decodedEmail = req.decoded.email
+            if(email !== decodedEmail){
                 return res.status(403).send({message: 'Forbidden Access'})
             }
 
@@ -119,6 +119,23 @@ async function run(){
             console.log(user);
             res.status(403).send({accessToken: ''})
         })
+
+        // 8.
+        app.get('/buyerUsers', async (req, res) =>{
+            const query = {};
+            const users = await buyerUsersCollection.find(query).toArray();
+            res.send(users);
+        });
+
+        // 9.
+        app.get('/buyerUsers/admin/:email', async(req, res) =>{
+                const email = req.params.email;
+                const query = { email }
+                const user = await buyerUsersCollection.findOne(query);
+              
+                res.send({isAdmin: user?.role === 'admin'});
+        });
+
   
 
 
@@ -128,6 +145,27 @@ async function run(){
             const result = await buyerUsersCollection.insertOne(buyerUser);
             res.send(result);
         });
+
+        // 7.
+        app.put('/buyerUsers/admin/:id', verifyJWT, async(req, res) =>{ 
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+             const user = await buyerUsersCollection.findOne(query);
+            if(user?.role !== 'admin'){
+                return res.status(403).send({message: 'Forbidden Access'})
+            }
+
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id)}
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await buyerUsersCollection.updateOne(filter, updateDoc, options);
+            res.send(result);
+        })  
 
        
 
