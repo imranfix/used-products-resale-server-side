@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
@@ -18,6 +19,27 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.z6welky.mongodb.net/?retryWrites=true&w=majority`;
 // console.log(uri)
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+// jwt middleware function:
+function verifyJWT(req, res, next){
+    console.log('token inside verifyJWT', req.headers.authorization);
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send('Unauthorized Access');
+
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN, function(err, decoded){
+        if(err){
+            return res.status(403).send({message: 'Forbidden Access'})
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
+
 
 async function run(){
     try{
@@ -46,11 +68,11 @@ async function run(){
 
 
          
-         // 2.
+         // 2(ai vabe korle hobe):
         // app.get('/category/:id', async(req, res) =>{
         //     const id = req.params.id;
-        //     const query = { _id: ObjectId(id) };
-        //     const categoryItem = await categoryCollection.findOne(query);
+        //     const query = { category_id: category_id };
+        //     const categoryItem = await categoryCollection.find(query);
         //     res.send(categoryItem);
         // });
  
@@ -73,21 +95,41 @@ async function run(){
          });
 
         //  4. get data form bookings:
-         app.get('/bookings', async(req, res) =>{
+         app.get('/bookings', verifyJWT, async(req, res) =>{
             const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+            if(email !==decodedEmail){
+                return res.status(403).send({message: 'Forbidden Access'})
+            }
+
             const query = { email: email };
             const bookings = await buyerBookingCollection.find(query).toArray();
             res.send(bookings);
          });
+
+          // 6. jwt token:
+        app.get('/jwt', async(req, res) =>{
+            const email = req.query.email;
+            const query = { email: email }
+            const user= await buyerUsersCollection.findOne(query);
+            if(user){
+                const token = jwt.sign({email}, process.env.ACCESS_TOKEN,{expiresIn: '1h'})
+                return res.send({accessToken: token});
+            }
+            console.log(user);
+            res.status(403).send({accessToken: ''})
+        })
+  
+
 
         //  5. create buyers user data:
         app.post('/buyerUsers', async(req, res) =>{
             const buyerUser = req.body;
             const result = await buyerUsersCollection.insertOne(buyerUser);
             res.send(result);
-        })
-  
+        });
 
+       
 
     }
     finally{
