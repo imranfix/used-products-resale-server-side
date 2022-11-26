@@ -24,6 +24,8 @@ async function run(){
 
         const categoryCollection = client.db('oldBook').collection('category');
         const productsCollection = client.db('oldBook').collection('products');
+        const buyerBookingCollection = client.db('oldBook').collection('bookings');
+        const buyerUsersCollection = client.db('oldBook').collection('buyerUsers');
 
 
         // 1. get read data form category:
@@ -34,7 +36,7 @@ async function run(){
             res.send(category);
         });
 
-        // 3.
+        // 2. get read data form products:
         app.get('/products', async(req, res) =>{
             const query = {}
             const cursor = productsCollection.find(query);
@@ -61,6 +63,29 @@ async function run(){
         //     res.send(categoryItem);
         // });
 
+
+        // 3.create data by post:
+         app.post('/bookings', async(req, res) =>{
+            const booking = req.body
+            console.log(booking);
+            const result = await buyerBookingCollection.insertOne(booking);
+            res.send(result);
+         });
+
+        //  4. get data form bookings:
+         app.get('/bookings', async(req, res) =>{
+            const email = req.query.email;
+            const query = { email: email };
+            const bookings = await buyerBookingCollection.find(query).toArray();
+            res.send(bookings);
+         });
+
+        //  5. create buyers user data:
+        app.post('/buyerUsers', async(req, res) =>{
+            const buyerUser = req.body;
+            const result = await buyerUsersCollection.insertOne(buyerUser);
+            res.send(result);
+        })
   
 
 
