@@ -180,6 +180,24 @@ async function run(){
             const result = await buyerUsersCollection.updateOne(filter, updateDoc, options);
             res.send(result);
         });
+
+
+        // 13. delete add product data:
+        app.delete('/sellers/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const result = await selllersCollection.deleteOne(filter);
+            res.send(result);
+        })
+
+
+        // 12. get data from add product:
+        app.get('/sellers', async(req, res) =>{
+            const query = {};
+            const seller = await selllersCollection.find(query).toArray();
+            res.send(seller);
+        })
+
         
         // 11. create data form add product :
         app.post ('/sellers', async(req, res) =>{
