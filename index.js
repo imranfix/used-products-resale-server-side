@@ -48,6 +48,7 @@ async function run(){
         const productsCollection = client.db('oldBook').collection('products');
         const buyerBookingCollection = client.db('oldBook').collection('bookings');
         const buyerUsersCollection = client.db('oldBook').collection('buyerUsers');
+        const selllersCollection = client.db('oldBook').collection('sellers');
 
 
         // 1. get read data form category:
@@ -118,7 +119,9 @@ async function run(){
             }
             console.log(user);
             res.status(403).send({accessToken: ''})
-        })
+        });
+
+
 
         // 8.
         app.get('/buyerUsers', async (req, res) =>{
@@ -126,6 +129,17 @@ async function run(){
             const users = await buyerUsersCollection.find(query).toArray();
             res.send(users);
         });
+
+        // 10. make-admin role: 
+        app.get('/buyerUsers/admin/:email', async(req, res) =>{
+            const email = req.params.email;
+            const query = { email }
+            const user = await buyerUsersCollection.findOne(query);
+            res.send({isAdmin: user?.role === 'admin'});
+
+        });
+
+
 
         // 9.
         app.get('/buyerUsers/admin/:email', async(req, res) =>{
@@ -165,7 +179,16 @@ async function run(){
             }
             const result = await buyerUsersCollection.updateOne(filter, updateDoc, options);
             res.send(result);
-        })  
+        });
+        
+        // 11. create data form add product :
+        app.post ('/sellers', async(req, res) =>{
+            const seller = req.body;
+            const result = await selllersCollection.insertOne(seller);
+            res.send(result);
+        })
+
+
 
        
 
