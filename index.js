@@ -52,6 +52,8 @@ async function run(){
         const buyerBookingCollection = client.db('oldBook').collection('bookings');
         const buyerUsersCollection = client.db('oldBook').collection('buyerUsers');
         const selllersCollection = client.db('oldBook').collection('sellers');
+        // payments collection:
+        const paymentCollection = client.db('oldBook').collection('payments');
 
         // verifyAdmin:
         const verifyAdmin = async(req, res, next) =>{
@@ -149,6 +151,22 @@ async function run(){
                 res.send({
                     clientSecret: paymentIntent.client_secret,
                 });
+            });
+
+            // 16. create payment data collection:
+            app.post('/payments', async(req, res) =>{
+                const payment = req.body;
+                const result = await paymentCollection.insertOne(payment);
+                const id = payment.bookingId;
+                const filter = { _id: ObjectId(id) };
+                const updateDoc = {
+                    $set: {
+                        paid: true,
+                        transactionId: payment.transactionId
+                    }
+                }
+                const updateResult = await buyerBookingCollection.updateOne(filter, updateDoc);
+                res.send(result);
             })
 
 
