@@ -5,6 +5,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+// stripe secret key:
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const port = process.env.PORT || 5000;
 
 
@@ -49,6 +52,19 @@ async function run(){
         const buyerBookingCollection = client.db('oldBook').collection('bookings');
         const buyerUsersCollection = client.db('oldBook').collection('buyerUsers');
         const selllersCollection = client.db('oldBook').collection('sellers');
+
+        // verifyAdmin:
+        const verifyAdmin = async(req, res, next) =>{
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+             const user = await buyerUsersCollection.findOne(query);
+            if(user?.role !== 'admin'){
+                return res.status(403).send({message: 'Forbidden Access'})
+            }
+
+            next();
+
+        }
 
 
         // 1. get read data form category:
@@ -108,6 +124,34 @@ async function run(){
             res.send(bookings);
          });
 
+        //  14. get read specific data form bookings:
+        app.get('/bookings/:id', async(req, res) =>{
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const booking = await buyerBookingCollection.findOne(query);
+            res.send(booking);
+        });
+
+        // 15. stripe payment gateway :
+            app.post('/create-payment-intent', async(req, res) =>{
+                const booking = req.body;
+                const price = booking.price;
+                const amount = price * 100 ;
+                // console.log(booking);
+
+                const paymentIntent = await stripe.paymentIntents.create({
+                    currency: 'usd',
+                    amount: amount,
+                    "payment_method_types":[
+                        "card"
+                    ],
+                });
+                res.send({
+                    clientSecret: paymentIntent.client_secret,
+                });
+            })
+
+
           // 6. jwt token:
         app.get('/jwt', async(req, res) =>{
             const email = req.query.email;
@@ -161,14 +205,8 @@ async function run(){
         });
 
         // 7.
-        app.put('/buyerUsers/admin/:id', verifyJWT, async(req, res) =>{ 
-            const decodedEmail = req.decoded.email;
-            const query = { email: decodedEmail };
-             const user = await buyerUsersCollection.findOne(query);
-            if(user?.role !== 'admin'){
-                return res.status(403).send({message: 'Forbidden Access'})
-            }
-
+        app.put('/buyerUsers/admin/:id', verifyJWT, verifyAdmin, async(req, res) =>{ 
+           
             const id = req.params.id;
             const filter = { _id: ObjectId(id)}
             const options = { upsert: true };
@@ -183,7 +221,7 @@ async function run(){
 
 
         // 13. delete add product data:
-        app.delete('/sellers/:id', async (req, res) => {
+        app.delete('/sellers/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
             const result = await selllersCollection.deleteOne(filter);
@@ -192,7 +230,7 @@ async function run(){
 
 
         // 12. get data from add product:
-        app.get('/sellers', async(req, res) =>{
+        app.get('/sellers', verifyJWT, verifyAdmin, async(req, res) =>{
             const query = {};
             const seller = await selllersCollection.find(query).toArray();
             res.send(seller);
@@ -200,7 +238,7 @@ async function run(){
 
         
         // 11. create data form add product :
-        app.post ('/sellers', async(req, res) =>{
+        app.post ('/sellers', verifyJWT, verifyAdmin, async(req, res) =>{
             const seller = req.body;
             const result = await selllersCollection.insertOne(seller);
             res.send(result);
